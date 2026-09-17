@@ -1,7 +1,6 @@
-//% color=#E65100 icon="\uf02b" block="RFID" weight=100
-namespace rfid {
-    const NSS = DigitalPin.P16
-    const RST = DigitalPin.P8
+namespace bnet {
+    const R_NSS = DigitalPin.P16
+    const R_RST = DigitalPin.P8
 
     const CommandReg = 0x01, ComIrqReg = 0x04, DivIrqReg = 0x05
     const ErrorReg = 0x06, Status2Reg = 0x08, FIFODataReg = 0x09
@@ -19,19 +18,19 @@ namespace rfid {
     const BLOCK_ADDR = 1
     const KEY_A = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
 
-    let started = false
+    let rfidStarted = false
     let lastValue = -1
 
     function wReg(a: number, v: number) {
-        pins.digitalWritePin(NSS, 0)
+        pins.digitalWritePin(R_NSS, 0)
         pins.spiWrite((a << 1) & 0x7E); pins.spiWrite(v & 0xFF)
-        pins.digitalWritePin(NSS, 1)
+        pins.digitalWritePin(R_NSS, 1)
     }
     function rReg(a: number) {
-        pins.digitalWritePin(NSS, 0)
+        pins.digitalWritePin(R_NSS, 0)
         pins.spiWrite(((a << 1) & 0x7E) | 0x80)
         let v = pins.spiWrite(0x00)
-        pins.digitalWritePin(NSS, 1)
+        pins.digitalWritePin(R_NSS, 1)
         return v & 0xFF
     }
     function setB(a: number, m: number) { wReg(a, rReg(a) | m) }
@@ -94,7 +93,7 @@ namespace rfid {
         let r = toCard(PCD_AUTHENT, b)
         return (r.status == MI_OK && (rReg(Status2Reg) & 0x08) != 0)
     }
-    function stop() { clrB(Status2Reg, 0x08) }
+    function haltCrypto() { clrB(Status2Reg, 0x08) }
 
     function readBlk(block: number): number[] {
         let b = [PICC_READ, block]
@@ -114,22 +113,25 @@ namespace rfid {
     }
 
     /**
-     * Start the RFID reader. Put this in "on start".
+     * Start the RFID reader (RC522). Put this in "on start".
+     * Wiring (micro:bit -> RC522):
+     * SDA/SS -> P16, SCK -> P13, MOSI -> P15,
+     * MISO -> P14, RST -> P8, 3.3V -> 3V, GND -> GND
      */
-    //% block="setup RFID"
-    //% weight=100
+    //% block="setup RFID (SS=P16 SCK=P13 MOSI=P15 MISO=P14 RST=P8)"
+    //% subcategory="RFID" weight=100
     export function setup(): void {
-        pins.digitalWritePin(RST, 0); basic.pause(50)
-        pins.digitalWritePin(RST, 1); basic.pause(50)
+        pins.digitalWritePin(R_RST, 0); basic.pause(50)
+        pins.digitalWritePin(R_RST, 1); basic.pause(50)
         pins.spiPins(DigitalPin.P14, DigitalPin.P15, DigitalPin.P13)
         pins.spiFormat(8, 0); pins.spiFrequency(1000000)
-        pins.digitalWritePin(NSS, 1)
+        pins.digitalWritePin(R_NSS, 1)
         wReg(CommandReg, PCD_SOFTRESET); basic.pause(50)
         wReg(TModeReg, 0x8D); wReg(TPrescalerReg, 0x3E)
         wReg(TReloadL, 30); wReg(TReloadH, 0)
         wReg(TxAutoReg, 0x40); wReg(ModeReg, 0x3D)
         setB(TxControlReg, 0x03)
-        started = true
+        rfidStarted = true
     }
 
     /**
@@ -137,15 +139,15 @@ namespace rfid {
      */
     //% block="write %value to card"
     //% value.min=0 value.max=255 value.defl=1
-    //% weight=80
+    //% subcategory="RFID" weight=80
     export function write(value: number): boolean {
-        if (!started) setup()
+        if (!rfidStarted) setup()
         if (!req()) return false
         let uid = anti(); if (uid.length == 0) return false
         if (!sel(uid)) return false
-        if (!auth(BLOCK_ADDR, uid)) { stop(); return false }
+        if (!auth(BLOCK_ADDR, uid)) { haltCrypto(); return false }
         let d = [value & 0xFF]; for (let i = 1; i < 16; i++) d.push(0)
-        let ok = writeBlk(BLOCK_ADDR, d); stop()
+        let ok = writeBlk(BLOCK_ADDR, d); haltCrypto()
         return ok
     }
 
@@ -154,15 +156,15 @@ namespace rfid {
      */
     //% block="on card scanned"
     //% draggableParameters=reporter
-    //% weight=90
+    //% subcategory="RFID" weight=90
     export function onCard(handler: (value: number) => void): void {
-        if (!started) setup()
+        if (!rfidStarted) setup()
         control.inBackground(function () {
             while (true) {
                 if (req()) {
                     let uid = anti()
                     if (uid.length != 0 && sel(uid) && auth(BLOCK_ADDR, uid)) {
-                        let d = readBlk(BLOCK_ADDR); stop()
+                        let d = readBlk(BLOCK_ADDR); haltCrypto()
                         if (d.length == 16) {
                             let v = d[0]
                             if (v != lastValue) {
@@ -170,7 +172,7 @@ namespace rfid {
                                 handler(v)
                             }
                         }
-                    } else { stop() }
+                    } else { haltCrypto() }
                 } else {
                     lastValue = -1
                 }
