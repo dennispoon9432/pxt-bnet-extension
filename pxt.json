@@ -1,0 +1,20 @@
+{
+    "name": "bnet-extension",
+    "version": "0.0.1",
+    "description": "BNET Extension: Motor, TOF (VL53L0X) and RFID (RC522) blocks for micro:bit",
+    "dependencies": {
+        "core": "*"
+    },
+    "files": [
+        "motor.ts",
+        "tof.ts",
+        "rfid.ts"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "blocksprj"
+}
