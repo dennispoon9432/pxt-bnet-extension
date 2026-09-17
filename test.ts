@@ -1,15 +1,14 @@
-// Test file for BNET Extension - not included when others import the library
-motorModule.setPins(AnalogPin.P0, AnalogPin.P1)
-tof.init()
-rfid.setup()
+bnet.setPins(AnalogPin.P0, AnalogPin.P1)
+bnet.init()
+bnet.setup()
 
 input.onButtonPressed(Button.A, function () {
-    motorModule.rotate(60, motorModule.Direction.Forward)
+    bnet.rotate(60, bnet.Direction.Forward)
 })
 input.onButtonPressed(Button.B, function () {
-    motorModule.stop()
-    basic.showNumber(tof.distance())
+    bnet.stop()
+    basic.showNumber(bnet.distance())
 })
-rfid.onCard(function (value: number) {
+bnet.onCard(function (value: number) {
     basic.showNumber(value)
 })
