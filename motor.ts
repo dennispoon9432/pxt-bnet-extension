@@ -1,8 +1,6 @@
-/**
- * Motor Module control using INA and INB pins.
- */
-//% color="#ff6600" weight=100 icon="\uf085" block="Motor"
-namespace motorModule {
+//% color=#3838C1 icon="\uf085" block="BNET" weight=100
+//% subcategories='["Motor", "TOF", "RFID"]'
+namespace bnet {
 
     let pinA: AnalogPin = AnalogPin.P0;
     let pinB: AnalogPin = AnalogPin.P1;
@@ -16,31 +14,24 @@ namespace motorModule {
 
     /**
      * Set the pins connected to INA and INB of the motor module.
-     * @param a pin connected to INA
-     * @param b pin connected to INB
      */
-    //% blockId=motor_set_pins
+    //% blockId=bnet_motor_set_pins
     //% block="set motor pins INA %a INB %b"
-    //% a.defl=AnalogPin.P0
-    //% b.defl=AnalogPin.P1
-    //% weight=100
+    //% a.defl=AnalogPin.P0 b.defl=AnalogPin.P1
+    //% subcategory="Motor" weight=100
     export function setPins(a: AnalogPin, b: AnalogPin): void {
-        pinA = a;
-        pinB = b;
+        pinA = a; pinB = b;
         pins.analogWritePin(pinA, 0);
         pins.analogWritePin(pinB, 0);
     }
 
     /**
      * Rotate the motor at a given speed and direction.
-     * @param speed motor speed 0 - 100 (%), eg: 50
-     * @param dir direction to rotate
      */
-    //% blockId=motor_rotate
+    //% blockId=bnet_motor_rotate
     //% block="rotate motor speed %speed \\% direction %dir"
-    //% speed.min=0 speed.max=100
-    //% speed.defl=50
-    //% weight=90
+    //% speed.min=0 speed.max=100 speed.defl=50
+    //% subcategory="Motor" weight=90
     export function rotate(speed: number, dir: Direction): void {
         if (speed < 0) speed = 0;
         if (speed > 100) speed = 100;
@@ -57,9 +48,9 @@ namespace motorModule {
     /**
      * Stop the motor immediately.
      */
-    //% blockId=motor_stop
+    //% blockId=bnet_motor_stop
     //% block="stop motor"
-    //% weight=80
+    //% subcategory="Motor" weight=80
     export function stop(): void {
         pins.analogWritePin(pinA, 0);
         pins.analogWritePin(pinB, 0);
